@@ -1,212 +1,73 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Archers - Juego</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+<!DOCTYPE html><html lang="en-us"><head>
+<script src="https://trafficjam3d.github.io/vs/gameloader-helper.js"></script>
+<meta charset="utf-8">
+<script src="https://trafficjam3d.github.io/vs/cloakGame.js"></script>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Ragdoll Archers</title>
 
-    body, html {
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background: #000;
-    }
-
-    #container {
-      position: relative;
-      width: 100vw;
-      height: 100vh;
-    }
-
-    #fr {
-      width: 100%;
-      height: 100%;
-      border: none;
-      display: none;
-    }
-
-    .play-button {
-      padding: 20px 40px;
-      background: #000;
-      color: #fff;
-      border: 2px solid #4a148c;
-      border-radius: 10px;
-      font: bold 24px Arial, sans-serif;
-      cursor: pointer;
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      z-index: 1001;
-      transition: background 0.3s;
-    }
-
-    .play-button:hover {
-      background: #4a148c;
-    }
-
-    .fullscreen-button {
-      padding: 10px 15px;
-      background: #000;
-      color: #fff;
-      border: 2px solid #4a148c;
-      border-radius: 5px;
-      font: bold 14px Arial, sans-serif;
-      cursor: pointer;
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      z-index: 1002;
-      transition: background 0.3s;
-    }
-
-    .fullscreen-button:hover {
-      background: #4a148c;
-    }
-
-    #unblocked-text {
-      position: absolute;
-      bottom: 20px;
-      left: 20px;
-      color: rgba(255, 255, 255, 0.3);
-      font: bold 14px Arial, sans-serif;
-      z-index: 1000;
-      margin: 0;
-    }
-
-    /* Spinner de carga */
-    .loader {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 50px;
-      height: 50px;
-      border: 5px solid rgba(255, 255, 255, 0.2);
-      border-top: 5px solid #4a148c;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      display: none;
-      z-index: 1000;
-    }
-
-    @keyframes spin {
-      0% { transform: translate(-50%, -50%) rotate(0deg); }
-      100% { transform: translate(-50%, -50%) rotate(360deg); }
-    }
-  </style>
-</head>
+<link rel="stylesheet" href="style.css">
 <body>
-  <div id="container">
-    <iframe id="fr" width="100%" height="100%" frameborder="0" allowfullscreen></iframe>
-    <button class="play-button" type="button" onclick="PlayTo(this)">CLICK TO PLAY</button>
-    <p id="unblocked-text">G+</p>
-    <button class="fullscreen-button" type="button" onclick="openFullscreen()">FULLSCREEN</button>
-    <div class="loader" id="loader"></div>
-  </div>
+<div id="unity-container" class="unity-desktop">
+<canvas id="unity-canvas"></canvas>
+</div>
+<div id="loading-cover">
+<div id="unity-loading-bar">
+<div id="unity-logo"><img src="logo.png"></div>
+<div class="progress-spinner-container">
+<div class="spinner-left"><img src="spinner.png"></div>
+<div id="unity-progress-bar-empty">
+<div id="unity-progress-bar-full"></div>
+</div>
+<div class="spinner-right"><img src="spinner.png"></div>
+</div>
+</div>
+</div>
+<script>
+    const buildUrl = "Build";
+    const loaderUrl = buildUrl + "/v111.loader.js";
+    const config = {
+      dataUrl: buildUrl + "/6697b6deba8b617c67b69c55dcd07cb1.data.unityweb",
+      frameworkUrl: buildUrl + "/0be3c3ee7115b26e1ae28e643afdf1f2.js.unityweb",
+      codeUrl: buildUrl + "/b3397c29f6878557c1c614cbf9e196ea.wasm.unityweb",
+      streamingAssetsUrl: "StreamingAssets",
+      companyName: "Ericetto",
+      productName: "Ragdoll Archers",
+      productVersion: "0.1",
+    };
 
-  <script>
-    const DB_NAME = 'GameCacheDB';
-    const STORE_NAME = 'GameFiles';
-    const CACHE_DURATION = 90 * 24 * 60 * 60 * 1000; // 90 días en milisegundos
-    const FILE_URL = 'https://cdn.jsdelivr.net/gh/ertemr33/qaza@main/1.xml';
+    const container = document.querySelector("#unity-container");
+    const canvas = document.querySelector("#unity-canvas");
+    const loadingCover = document.querySelector("#loading-cover");
+    const progressBarEmpty = document.querySelector("#unity-progress-bar-empty");
+    const progressBarFull = document.querySelector("#unity-progress-bar-full");
 
-    // Abrir la base de datos IndexedDB
-    function openDB() {
-      return new Promise((resolve, reject) => {
-        const request = indexedDB.open(DB_NAME, 1);
-        request.onupgradeneeded = (event) => {
-          const db = event.target.result;
-          if (!db.objectStoreNames.contains(STORE_NAME)) {
-            db.createObjectStore(STORE_NAME, { keyPath: 'url' });
-          }
-        };
-        request.onsuccess = (event) => resolve(event.target.result);
-        request.onerror = () => reject(event.target.error);
-      });
+    if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+      container.className = "unity-mobile";
     }
+    
+    loadingCover.style.display = "";
 
-    // Guardar contenido en la caché
-    async function saveToCache(url, content) {
-      const db = await openDB();
-      return new Promise((resolve, reject) => {
-        const transaction = db.transaction(STORE_NAME, 'readwrite');
-        const store = transaction.objectStore(STORE_NAME);
-        const request = store.put({ url: url, content: content, timestamp: Date.now() });
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(new Error('Error al guardar en caché'));
+    const unityLoader = document.createElement("script");
+    unityLoader.src = loaderUrl;
+    unityLoader.onload = () => {
+      createUnityInstance(canvas, config, (progress) => {
+        progressBarEmpty.style.display = "";
+        progressBarFull.style.width = `${100 * progress}%`;
+      }).then((unityInstance) => {
+        window.unityInstance = unityInstance;
+        loadingCover.style.display = "none";
+      }).catch((message) => {
+        alert(message);
       });
-    }
+    };
+    document.body.appendChild(unityLoader);
 
-    // Obtener el archivo desde la caché o descargarlo
-    async function getFileFromCache(url) {
-      const db = await openDB();
-      return new Promise((resolve, reject) => {
-        const transaction = db.transaction(STORE_NAME, 'readonly');
-        const store = transaction.objectStore(STORE_NAME);
-        const request = store.get(url);
-        request.onsuccess = async (event) => {
-          const data = event.target.result;
-          if (data && (Date.now() - data.timestamp) < CACHE_DURATION) {
-            resolve(data.content);
-          } else {
-            try {
-              const response = await fetch(url);
-              const text = await response.text();
-              await saveToCache(url, text);
-              resolve(text);
-            } catch (err) {
-              reject(err);
-            }
-          }
-        };
-        request.onerror = () => reject(new Error('Error de base de datos'));
-      });
-    }
+    document.addEventListener("pointerdown", () => {
+      container.focus();
+      window.focus();
+      canvas.focus();
+    });
 
-    // Reproducir el juego dentro del iframe
-    function PlayTo(button) {
-      const iframe = document.getElementById('fr');
-      const loader = document.getElementById('loader');
-      loader.style.display = 'block';
-      button.style.display = 'none';
-
-      getFileFromCache(FILE_URL).then((text) => {
-        loader.style.display = 'none';
-        iframe.contentDocument.open();
-        iframe.contentDocument.write(text);
-        iframe.contentDocument.close();
-        iframe.style.display = 'block';
-      }).catch((err) => {
-        loader.style.display = 'none';
-        button.style.display = 'block';
-        console.error('Error:', err);
-        alert('El juego no se pudo cargar. Inténtalo de nuevo.');
-      });
-    }
-
-    // Abrir el juego en pantalla completa (nueva ventana)
-    function openFullscreen() {
-      getFileFromCache(FILE_URL).then((text) => {
-        const newWindow = window.open('', '_blank');
-        if (newWindow) {
-          newWindow.document.open();
-          newWindow.document.write(text);
-          newWindow.document.close();
-        } else {
-          alert('No se pudo abrir la pantalla completa. Revisa el bloqueador de ventanas emergentes.');
-        }
-      }).catch((err) => {
-        console.error('Error:', err);
-        alert('No se pudo cargar la pantalla completa.');
-      });
-    }
   </script>
-</body>
-</html>
+</body></html>
